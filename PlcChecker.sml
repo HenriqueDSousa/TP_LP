@@ -35,12 +35,29 @@ fun allTypesMatch (types : plcType list):bool =
 fun teval (e:expr) (env: plcType env) : plcType =
 	case e of
 		  ConI _ => IntT
-		| Var x => lookup env x
 		| ConB _ => BoolT
-
-		| List [] => ListT []
 		| ESeq(SeqT t) => SeqT t
-	
+		| Var x => lookup env x
+		
+		| Let(x, e1, e2) =>
+
+				let
+					val t = teval e1 env
+					val env' = (x,t)::env
+				in
+					teval e2 env'
+				end
+		
+		(* recursive funcition *)
+		| Letrec(function, argType, varName, returnType, e1, e2) =>
+			
+				let 
+					val t1 = teval e1 ((function, FunT(argType, returnType))::(varName, argType)::env);
+            		val t2 = teval e2 ((function, FunT(argType, returnType))::env);
+				in
+					if returnType = t1 then t2 else raise WrongRetType
+				end
+
 		| Prim1(opr, e1) =>
 				let
 					val t1 = teval e1 env
@@ -84,20 +101,25 @@ fun teval (e:expr) (env: plcType env) : plcType =
 					| ("-" , IntT, IntT) => t1
 					| ("-", _, _) => raise UnknownType
 
-					| ("<", IntT, IntT)	=> t1
+					| ("<", IntT, IntT)	=> BoolT
 					| ("<", _, _) => raise NotEqTypes
 					
-					| ("<=", IntT, IntT) => t1
+					| ("<=", IntT, IntT) => BoolT
 					| ("<=", _, _) => raise NotEqTypes
 
-					| ("=", IntT, IntT) => t1
-					| ("=", BoolT, BoolT) => t1
-					| ("=", SeqT x1, SeqT x2) => t1
+					| ("=", IntT, IntT) => BoolT
+					| ("=", BoolT, BoolT) => BoolT
+					| ("=", SeqT x1, SeqT x2) => BoolT
 					| ("=", _, _) => raise NotEqTypes
+
+					| ("!=", IntT, IntT) => BoolT
+					| ("!=", BoolT, BoolT) => BoolT
+					| ("!=", SeqT x1, SeqT x2) => BoolT
+					| ("!=", _, _) => raise NotEqTypes
 
 					| (";" , _ , _) => t2
 					
-					| ("&&", BoolT, BoolT)  => t1
+					| ("&&", BoolT, BoolT)  => BoolT
 					| ("&&", _, _) => raise NotEqTypes
 
 					(*verificar*)
@@ -109,6 +131,21 @@ fun teval (e:expr) (env: plcType env) : plcType =
 
 					
 				end
+
+		(* If *)
+		| If(e1, e2, e3) =>
+
+			let
+				val t1 = teval e1 env
+				val t2 = teval e2 env
+				val t3 = teval e3 env
+			in
+				if t1 = BoolT then 
+				
+				(if t2 = t3 then t2 else raise DiffBrTypes)
+
+				else raise IfCondNotBool
+			end
 
 		| Match(_, []) => raise NoMatchResults
 		| Match(e0, conditions: (expr option * expr) list) =>
@@ -140,29 +177,46 @@ fun teval (e:expr) (env: plcType env) : plcType =
 			
 			end
 
-				
-		| Let(x, e1, e2) =>
+		| Call (e1, e2) =>
+			let in 
+			case (e1, e2) of
 
-				let
-					val t = teval e1 env
-					val env' = (x,t)::env
-				in
-					teval e2 env'
-				end
-		
-		(* recursive funcition *)
-		| Letrec(function, argType, varName, returnType, e1, e2) =>
-			
-				let 
-					val t1 = teval e1 ((function, FunT(argType, returnType))::(varName, argType)::env);
-            		val t2 = teval e2 ((function, FunT(argType, returnType))::env);
-				in
-					if returnType = t1 then t2 else raise WrongRetType
-				end
+				(* chamada de funcao *)
+				 (Var(f), exp) => 
+					let
+						val funcao = lookup env f;
+						val tipo = teval exp env;
+					in
+						case funcao of 
+
+							 FunT(arg, ret) => 
+							 	if tipo = arg then arg else raise CallTypeMisM
+							 
+							| _ => raise NotFunc 
+					end
+				
+				(* funcoes compostas *)
+				| ((Call g), _) =>
+					let
+						val composedFunct = teval (Call g) env 
+					in
+						case composedFunct of 
+							 FunT(_, num) =>  num
+						   | _ => raise NotFunc
+					end
+				
+				| (_ , _) => raise NotFunc 
+			end
+
+		(* List *)
+		| List [] => ListT []
+		| List (l: expr list) => ListT(map( fn(elem) => teval elem env) l)	 
+
+		(* Item *)
 
 		| _   =>  raise UnknownType
 	
-	val expr0 = Prim2("+", ConI 12, ConI 11);
+	val expr0 = List [ConI 1, ConI 2, ConI 12];
 
 	teval expr0 [];
 
