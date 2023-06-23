@@ -32,7 +32,6 @@ fun checkList(value: plcVal) : plcVal list =
      | ListV l => l
      | _ => raise Impossible
 
-
 fun eval (e:expr) (env:plcVal env) : plcVal =
 	case e of
 		  ConI i => IntV i
