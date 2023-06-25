@@ -84,6 +84,7 @@ fun teval (e:expr) (env: plcType env) : plcType =
 
 				end
 		| Prim2(opr, e1, e2) =>
+				
 				let
 					val t1 = teval e1 env
 					val t2 = teval e2 env
@@ -123,9 +124,18 @@ fun teval (e:expr) (env: plcType env) : plcType =
 					| ("&&", _, _) => raise NotEqTypes
 
 					(*verificar*)
-					| ("::", SeqT x1, SeqT x2) => if x1 = x2 then SeqT x1 else raise NotEqTypes
-					(*| ("::", SeqT x1, ESeq(SeqT x2)) => if x2 = SeqT x1 then SeqT x1 else raise NotEqTypes*)
-					| ("::", _, _) => raise UnknownType
+
+					| ("::", SeqT ta, SeqT tb) =>
+					 if (ta = tb) 
+					 then SeqT(ta)
+					 else raise NotEqTypes
+
+					| ("::", ta, tb) =>  
+						if SeqT(ta) = tb 
+						then SeqT(ta)
+						else raise NotEqTypes
+
+					(* | ("::", _, _) => raise UnknownType *)
 
 					| _   =>  raise UnknownType
 
@@ -214,9 +224,33 @@ fun teval (e:expr) (env: plcType env) : plcType =
 
 		(* Item *)
 
+		| Item(_, List []) => raise EmptySeq
+		
+		(* O item é indexado a partir do index 1 *)
+		| Item(i , List l) =>
+			if (i > 0 andalso i <= List.length(l)) 
+			then teval (List.nth(l, i-1)) env
+			else raise ListOutOfRange
+
+		| Item(i, e1) =>
+			let
+				val t1 = teval e1 env
+			in
+				case t1 of 
+					
+					 ListT li => 
+					 	if (i > 0 andalso i <= List.length(li)) 
+						then List.nth(li, i - 1) 
+						else raise ListOutOfRange
+					
+					| _ => raise OpNonList
+			end
+		
+		| Anon(t, name, e1) => FunT(t, teval e1 ((name, t)::env))
+
 		| _   =>  raise UnknownType
 	
-	val expr0 = List [ConI 1, ConI 2, ConI 12];
-
+	val expr0 = Letrec("f",BoolT,"x",BoolT,If (Var "x",ConI 11,ConI 22), Call (Var "f",ConB true));
+	
 	teval expr0 [];
 
