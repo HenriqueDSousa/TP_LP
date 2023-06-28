@@ -2,10 +2,12 @@
 
 fun run (e:expr) = 
 	let
-		val eType = teval e []
-		val eValue = eval e []
-	in
-		(val2string eValue) ^ " : " ^ (type2string eType)
+		val typesEnv: plcType env = [];
+    val varsEnv: plcVal env = [];
+    val resultType = teval e typesEnv;
+    val resultVar = eval e varsEnv;	
+  in
+		(val2string resultVar) ^ " : " ^ (type2string resultType)
 	end
 	handle SymbolNotFound => "Symbol not found."
 		| EmptySeq => "Plc Checker: Empty sequence should have a sequence type."
