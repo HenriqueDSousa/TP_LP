@@ -1,9 +1,11 @@
 (* PlcChecker *)
 
+(* use "Environ.sml";
+use "Absyn.sml"; *)
 
 exception EmptySeq (*A sequência de entrada não contém nenhum elemento*)
 exception UnknownType (*É usada nas situações onde nenhuma das específicas se encaixa.*)
-exception NotEqTypes(*Se os tipos usados numa comparação são diferentes.*)
+exception NotEqTypes(*Se os tipos usados numa comparação são dnoterentes.*)
 exception WrongRetType(*O tipo de retorno da função não condiz com o corpo da mesma.*)
 exception DiffBrTypes(*Os tipos da expressões dos possíveis caminhos de um If divergem*)
 exception IfCondNotBool(*A condição do if não é booleana*)
@@ -180,36 +182,24 @@ fun teval (e:expr) (env: plcType env) : plcType =
             else tRes
         end
 
-		| Call (e1, e2) =>
-			let in 
-			case (e1, e2) of
+		| Call(Var(e2), e1) => 
+            let
+                val mayBeFunType = lookup env e2;
+                val t1 = teval e1 env;
+            in 
+                case mayBeFunType of FunT(argT, retT) => if t1 = argT then retT else raise CallTypeMisM 
+                    | _ => raise NotFunc
+            end
 
-				(* chamada de funcao *)
-				 (Var(f), exp) => 
-					let
-						val funcao = lookup env f;
-						val tipo = teval exp env;
-					in
-						case funcao of 
+        | Call(Call a, e1) => 
+            let 
+                val x = teval (Call a) env 
+            in 
+                case x of FunT(_, r) => r 
+                    | _ => raise NotFunc
+            end 
 
-							 FunT(arg, ret) => 
-							 	if tipo = arg then arg else raise CallTypeMisM
-							 
-							| _ => raise NotFunc 
-					end
-				
-				(* funcoes compostas *)
-				| ((Call g), _) =>
-					let
-						val composedFunct = teval (Call g) env 
-					in
-						case composedFunct of 
-							 FunT(_, num) =>  num
-						   | _ => raise NotFunc
-					end
-				
-				| (_ , _) => raise NotFunc 
-			end
+        (* | Call(_, _) => raise NotFunc *)
 
 		(* List *)
 		| List [] => ListT []
@@ -244,3 +234,8 @@ fun teval (e:expr) (env: plcType env) : plcType =
 		| _   =>  raise UnknownType
 	
 
+(* val expr0 = Let
+      ("highAdd",Anon (IntT,"x",Anon (IntT,"y",Prim2 ("+",Var "x",Var "y"))),
+       Call (Call (Var "highAdd",ConI 3),ConI 4));
+
+teval expr0 [];  *)
