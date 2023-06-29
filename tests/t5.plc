@@ -1,0 +1,6 @@
+var x = 1;
+
+match x with
+| 0 -> 1
+| _ -> -1
+end
