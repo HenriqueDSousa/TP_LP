@@ -1,7 +1,4 @@
 (* PlcInterp *)
-use "Environ.sml";
-use "Absyn.sml";
-
 exception Impossible
 exception HDEmptySeq
 exception TLEmptySeq

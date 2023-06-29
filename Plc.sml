@@ -1,11 +1,9 @@
 (* Plc interpreter main file *)
 
-fun run (e:expr) = 
+fun run (e : expr) = 
 	let
-		val typesEnv: plcType env = [];
-    val varsEnv: plcVal env = [];
-    val resultType = teval e typesEnv;
-    val resultVar = eval e varsEnv;	
+    val resultType : plcType = teval e [];
+    val resultVar : plcVal = eval e [];	
   in
 		(val2string resultVar) ^ " : " ^ (type2string resultType)
 	end
