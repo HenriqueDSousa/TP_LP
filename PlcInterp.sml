@@ -8,15 +8,6 @@ exception TLEmptySeq
 exception ValueNotFoundInMatch
 exception NotAFunc
 
-(** fun eseqEval(value: plcType) : plcVal  =
-  case value of
-       IntT => SeqV ([] : IntV list)
-     | BoolT => SeqV ([] : BoolV list)
-     | FunT t1 * t2 => 
-     | ListT lt => 
-         case lt of 
-              IntT => Seq  
-**)
 
 fun checkInt(value: plcVal) : int =
   case value of
@@ -148,10 +139,9 @@ fun eval (e:expr) (env:plcVal env) : plcVal =
           case vf of
             Clos(fname, argname, exp, fstate) =>
               let
-                val v = eval exp fstate
+                val v = eval e env
                 val env1 = (argname, v) :: (fname, vf) :: fstate
               in
-                print((fname)^"\n");
                 eval exp env1
               end
             | _ => raise NotAFunc
