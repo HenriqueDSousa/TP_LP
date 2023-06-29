@@ -1,8 +1,5 @@
 (* PlcChecker *)
 
-use "Environ.sml";
-use "Absyn.sml";
-
 
 exception EmptySeq (*A sequência de entrada não contém nenhum elemento*)
 exception UnknownType (*É usada nas situações onde nenhuma das específicas se encaixa.*)
@@ -17,6 +14,13 @@ exception CallTypeMisM(*Você está passando pra uma chamada de função um tipo
 exception NotFunc(*Você está tentando chamar algo que não é uma função.*)
 exception ListOutOfRange(*Tentativa de acessar um elemento fora dos limites da lista*)
 exception OpNonList(*Tentativa de acessar um elemento em uma expressão que não é uma lista.*)
+
+    
+
+fun areAllRetTypesEqual (retTypes: plcType list) = foldl (fn (a, (areAllSame, t1)) => (areAllSame andalso t1 = a, t1)) (true, (hd retTypes)) retTypes;
+fun notNone (expa, _) : bool = case expa of NONE => false | SOME x => true;
+
+
 
 fun allTypesMatch (types : plcType list):bool = 
 	case types of
@@ -38,7 +42,6 @@ fun teval (e:expr) (env: plcType env) : plcType =
 		| ConB _ => BoolT
 		| ESeq(SeqT t) => SeqT t
 		| Var x => lookup env x
-		
 		| Let(x, e1, e2) =>
 
 				let
@@ -135,8 +138,6 @@ fun teval (e:expr) (env: plcType env) : plcType =
 						then SeqT(ta)
 						else raise NotEqTypes
 
-					(* | ("::", _, _) => raise UnknownType *)
-
 					| _   =>  raise UnknownType
 
 					
@@ -158,14 +159,17 @@ fun teval (e:expr) (env: plcType env) : plcType =
 			end
 
 		| Match(_, []) => raise NoMatchResults
-		| Match(e0, conditions: (expr option * expr) list) =>
+		(* | Match(e0, conditions: (expr option * expr) list) =>
 			
 			
 			let
-				(* tipos de retorno das condicoes *)
-				val conditionsRetTypes = map( fn(_,res) => teval res env) conditions 
-				(* tipos de argumentos das condicoes *)
-				val conditionsCondTypes = map(fn (SOME cond,_) => teval cond env | (_,_)=> raise UnknownType) conditions 
+				
+				val conditionsCondTypes = map(fn (SOME cond, _ ) => teval cond env 
+											   | (_,_)=> raise UnknownType) conditions (* tipos de argumentos das condicoes *)
+
+				val conditionsRetTypes = map( fn(_,res) => teval res env) conditions (* tipos de retorno das condicoes *)
+				
+				
 				
 				val t1 = teval e0 env
 
@@ -185,7 +189,27 @@ fun teval (e:expr) (env: plcType env) : plcType =
 				List.hd(conditionsRetTypes)
 
 			
-			end
+			end *)
+		
+		| Match(e, conds: (expr option * expr) list) => 
+        let
+
+			(* tipos de retornos *)
+            val condsRetTypes = map (fn (_, r) => teval r env) conds;
+            val (sameRet, tRes) = areAllRetTypesEqual condsRetTypes;
+            val condsExceptNone = (List.filter notNone conds); 
+
+			(* tipos das condicoes *)
+            val condTypes = map (fn (SOME c, _) => teval c env | (_,_) => raise UnknownType) condsExceptNone;
+            val (sameCond, tCond) = areAllRetTypesEqual(condTypes);
+            val eType = teval e env;
+        in
+            if sameRet = false 
+            then raise MatchResTypeDiff 
+            else if (sameCond = false orelse eType <> tCond)
+            then raise MatchCondTypesDiff
+            else tRes
+        end
 
 		| Call (e1, e2) =>
 			let in 
@@ -250,7 +274,4 @@ fun teval (e:expr) (env: plcType env) : plcType =
 
 		| _   =>  raise UnknownType
 	
-	val expr0 = Letrec("f",BoolT,"x",BoolT,If (Var "x",ConI 11,ConI 22), Call (Var "f",ConB true));
-	
-	teval expr0 [];
 
