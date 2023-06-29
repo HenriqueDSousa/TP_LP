@@ -159,38 +159,7 @@ fun teval (e:expr) (env: plcType env) : plcType =
 			end
 
 		| Match(_, []) => raise NoMatchResults
-		(* | Match(e0, conditions: (expr option * expr) list) =>
-			
-			
-			let
-				
-				val conditionsCondTypes = map(fn (SOME cond, _ ) => teval cond env 
-											   | (_,_)=> raise UnknownType) conditions (* tipos de argumentos das condicoes *)
-
-				val conditionsRetTypes = map( fn(_,res) => teval res env) conditions (* tipos de retorno das condicoes *)
-				
-				
-				
-				val t1 = teval e0 env
-
-				val sameRet = allTypesMatch conditionsRetTypes
-				val sameCond = allTypesMatch conditionsCondTypes
-			in	
-
-				
-				if sameRet = false 
-				then raise MatchResTypeDiff
-				else if (sameCond = false orelse t1 <> (List.hd(conditionsCondTypes)))
-				then raise MatchCondTypesDiff
-				
-				(*se todos retornos e argumentos tiverem os mesmos tipos*)
-				else
-				
-				List.hd(conditionsRetTypes)
-
-			
-			end *)
-		
+	
 		| Match(e, conds: (expr option * expr) list) => 
         let
 
