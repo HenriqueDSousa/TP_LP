@@ -116,6 +116,8 @@ fun eval (e:expr) (env:plcVal env) : plcVal =
           val found = List.find(fn (x) => (#1 x) = SOME(e)) options;
           val notFound = List.find(fn (x) => (#1 x) = NONE) options;
         in 
+          if notFound = NONE andalso found = NONE then raise ValueNotFoundInMatch
+          else
           case found of
              SOME(some, value) => eval value env
              | NONE => eval (#2 (Option.getOpt(notFound, (NONE, ConI 0)))) env
