@@ -20,7 +20,6 @@ use "PlcChecker.sml";
 use "PlcInterp.sml";
 use "Plc.sml";
 use "testCases.sml";
-use "testePlc.sml";
 (*use "ParserReference.sml";*)
 
 val interpFile = TextIO.openAppend "Plc-Output";
