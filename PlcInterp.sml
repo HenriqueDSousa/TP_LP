@@ -38,6 +38,7 @@ fun eval (e:expr) (env:plcVal env) : plcVal =
           ListV (element1::element2)
 		    end
     | Var x => lookup env x
+
 		| Prim1(opr, e1) =>
 				let
 					val v1 = eval e1 env
@@ -100,17 +101,24 @@ fun eval (e:expr) (env:plcVal env) : plcVal =
           List.nth(seq, idx-1)
         end
     | If(e1, e2, e3) => if eval e1 env = BoolV true then eval e2 env else eval e3 env
-    | Match(e, options) => 
+
+    | Match(e1, hd::options: (expr option * expr) list) => 
+        
         let
-          val found = List.find(fn (x) => (#1 x) = SOME(e)) options;
-          val notFound = List.find(fn (x) => (#1 x) = NONE) options;
-        in 
-          if notFound = NONE andalso found = NONE then raise ValueNotFoundInMatch
-          else
-          case found of
-             SOME(some, value) => eval value env
-             | NONE => eval (#2 (Option.getOpt(notFound, (NONE, ConI 0)))) env
+          val ve1 = eval e1 env;
+          val (m, a) = hd
+        in
+          case m of
+            SOME e2 => if ve1 = eval e2 env then 
+                        eval a env 
+                      else if options = [] then 
+                        raise ValueNotFoundInMatch 
+                      else 
+                        eval(Match(e1, options)) env
+            | NONE => eval a env
         end
+
+
 		| Let(x, e1, e2) =>
 				let
 					val v = eval e1 env
@@ -119,29 +127,42 @@ fun eval (e:expr) (env:plcVal env) : plcVal =
 					eval e2 env2
 				end
     | Anon(_, str, e) => Clos("", str, e, env)
+
     | Letrec(fname, _, argname, _, e1, e2) =>
+
         let
-          val closure = Clos(fname, argname, e1, env)
-          val env2 = (fname, closure) :: env
+            val closure = Clos(fname, argname, e1, env)
+            val env2 = (fname, closure) :: env
         in
-          eval e2 env2
-        end
-    | Call(f, e) =>
-        let
-          val vf =
-            case f of 
-              Var f1 => lookup env f1
-              | Call(f1, e1) => eval f1 env
-              | _ => raise Impossible
-        in
-          case vf of
-            Clos(fname, argname, exp, fstate) =>
-              let
-                val v = eval e env
-                val env1 = (argname, v) :: (fname, vf) :: fstate
-              in
-                eval exp env1
-              end
-            | _ => raise NotAFunc
+            eval e2 env2
         end
 
+    | Call(Var vf, e) => let 
+          val fv = lookup env vf
+        in
+          case fv of
+            Clos(vf, x, e1, fSt) => let
+              val ve1 = eval e env;
+              val env' = (x, ve1) :: (vf, fv) :: fSt
+            in
+              eval e1 env'
+            end
+            | _ => raise NotAFunc
+        end 
+
+    | Call(Call f, e) => 
+        
+        let 
+          val vf = eval (Call f) env;
+        in
+          case vf of
+            Clos(f, x, e1, fSt) => let
+              val ve1 = eval e env;
+              val env' = (x, ve1) :: (f, vf) :: fSt
+            in
+              eval e1 env'
+            end
+            | _ => raise NotAFunc
+        end 
+
+    | _ => raise Impossible
