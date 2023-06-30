@@ -1,7 +1,5 @@
 (* PlcChecker *)
 
-(* use "Environ.sml";
-use "Absyn.sml"; *)
 
 exception EmptySeq (*A sequência de entrada não contém nenhum elemento*)
 exception UnknownType (*É usada nas situações onde nenhuma das específicas se encaixa.*)
@@ -199,7 +197,7 @@ fun teval (e:expr) (env: plcType env) : plcType =
                     | _ => raise NotFunc
             end 
 
-        (* | Call(_, _) => raise NotFunc *)
+        | Call(_, _) => raise NotFunc 
 
 		(* List *)
 		| List [] => ListT []
@@ -233,9 +231,3 @@ fun teval (e:expr) (env: plcType env) : plcType =
 
 		| _   =>  raise UnknownType
 	
-
-(* val expr0 = Let
-      ("highAdd",Anon (IntT,"x",Anon (IntT,"y",Prim2 ("+",Var "x",Var "y"))),
-       Call (Call (Var "highAdd",ConI 3),ConI 4));
-
-teval expr0 [];  *)
